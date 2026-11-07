@@ -39,7 +39,7 @@
 </div>
 <footer class="app-credit">App designed and developed by <strong>Mr. Rajkumar Choudhary</strong></footer><div id="notice"></div>
 <script>
-const $=id=>document.getElementById(id),K=['number','date','outTime','type','party','material','qty','takenBy','mode','vehicle','driver','remarks','department'];let records=[],mainPhoto=null,extras=[],photoType='';const demo=false; const API_URL='https://script.google.com/macros/s/AKfycbw7Qo_X8si9iDurJqbv9iV2MdMRFfGHHupek2T6xE979I4KfxZRFD2p6RqJMO2vYjA-/exec';
+const $=id=>document.getElementById(id),K=['number','date','outTime','type','party','material','qty','takenBy','mode','vehicle','driver','remarks','department'];let records=[],mainPhoto=null,extras=[],photoType='';const API_URL='https://script.google.com/macros/s/AKfycbw7Qo_X8si9iDurJqbv9iV2MdMRFfGHHupek2T6xE979I4KfxZRFD2p6RqJMO2vYjA-/exec';
 function alertBox(t){$('notice').textContent=t;$('notice').style.display='block';setTimeout(()=>$('notice').style.display='none',4000)}function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function now(){const d=new Date();$('date').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;$('outTime').value=d.toTimeString().slice(0,5)}now();setInterval(()=>$('clock').textContent=new Date().toLocaleTimeString('en-IN'),1000);
 function page(id){['dashboard','create','register','photos'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));if(id==='photos')renderPhotos()}
 function apiGet(name,arg){
@@ -49,7 +49,7 @@ function apiGet(name,arg){
   function finish(err,data){clearTimeout(timer);try{delete window[cb]}catch(_){}script.remove();err?reject(err):resolve(data)}
   window[cb]=res=>{if(!res||!res.ok)return finish(new Error(res&&res.error?res.error:'API request failed'));finish(null,res.data)};
   script.onerror=()=>finish(new Error('Could not connect to Apps Script. Check deployment URL and access permissions.'));
-  let url=API_URL+'?api='+encodeURIComponent(name)+'&callback='+encodeURIComponent(cb);
+  let url=API_URL+'?api='+encodeURIComponent(name)+'&callback='+encodeURIComponent(cb)+'&_='+Date.now();
   if(arg!==undefined)url+='&arg='+encodeURIComponent(JSON.stringify(arg));
   script.src=url;document.head.appendChild(script);
  });
@@ -62,7 +62,7 @@ function apiPost(name,arg){
   const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify({requestId,action:name,arg});
   form.appendChild(input);document.body.append(iframe,form);
   const timer=setTimeout(()=>finish(new Error('Apps Script save timed out. Check deployment and internet connection.')),60000);
-  function onMessage(ev){if(ev.source!==iframe.contentWindow)return;const d=ev.data;if(!d||d.type!=='CLARKS_GATEPASS_API'||d.requestId!==requestId)return;finish(d.ok?null:new Error(d.error||'Save failed'),d.data)}
+  function onMessage(ev){const d=ev.data;if(!d||d.type!=='CLARKS_GATEPASS_API'||d.requestId!==requestId)return;finish(d.ok?null:new Error(d.error||'Save failed'),d.data)}
   function finish(err,data){clearTimeout(timer);window.removeEventListener('message',onMessage);form.remove();iframe.remove();err?reject(err):resolve(data)}
   window.addEventListener('message',onMessage);form.submit();
  });
@@ -91,11 +91,11 @@ $('gateForm').onsubmit=async e=>{
  }catch(err){alertBox(err.message)}finally{$('saveBtn').disabled=false}
 };
 load();page('dashboard');
-function tag(s){return `<span class="pill ${s==='Closed'?'closed':''}">${esc(s)}</span>`}function actions(r){const no=encodeURIComponent(r['Gatepass No']);return `${r['Status']==='Pending'?`<button onclick="receive('${no}')">Material In</button>`:''} <button onclick="printPass('${no}')">Print / PDF</button>`}
+function dateDisplay(v){if(v===null||v===undefined||v==='')return '';const s=String(v).trim();let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return `${m[3]}-${m[2]}-${m[1]}`;m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);if(m)return `${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}-${m[3]}`;return s}function timeDisplay(v){if(v===null||v===undefined||v==='')return '';let s=String(v).trim();let m=s.match(/(?:T|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);if(!m)m=s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?/);if(!m)return s;let h=Number(m[1]),min=m[2],ampm=h>=12?'PM':'AM';h=h%12||12;return `${String(h).padStart(2,'0')}:${min} ${ampm}`}function tag(s){return `<span class="pill ${s==='Closed'?'closed':''}">${esc(s)}</span>`}function actions(r){const no=encodeURIComponent(r['Gatepass No']);return `${r['Status']==='Pending'?`<button onclick="receive('${no}')">Material In</button>`:''} <button onclick="printPass('${no}')">Print / PDF</button>`}
 function render(){const n=records;$('total').textContent=n.length;$('pending').textContent=n.filter(r=>r['Gatepass Type']==='RGP'&&r['Status']==='Pending').length;$('nrgp').textContent=n.filter(r=>r['Gatepass Type']==='NRGP'&&r['Status']==='Closed').length;$('closed').textContent=n.filter(r=>r['Status']==='Closed').length;
-$('recent').innerHTML=n.slice(0,8).map(r=>`<tr><td>${esc(r['Gatepass No'])}</td><td>${esc(r['Date'])}</td><td>${esc(r['Gatepass Type'])}</td><td>${esc(r['Party Name'])}</td><td>${esc(r['Material Name'])}</td><td>${esc(r['Qty'])}</td><td>${tag(r['Status'])}</td><td>${actions(r)}</td></tr>`).join('')||'<tr><td colspan="8">No records</td></tr>';
+$('recent').innerHTML=n.slice(0,8).map(r=>`<tr><td>${esc(r['Gatepass No'])}</td><td>${esc(dateDisplay(r['Date']))}</td><td>${esc(r['Gatepass Type'])}</td><td>${esc(r['Party Name'])}</td><td>${esc(r['Material Name'])}</td><td>${esc(r['Qty'])}</td><td>${tag(r['Status'])}</td><td>${actions(r)}</td></tr>`).join('')||'<tr><td colspan="8">No records</td></tr>';
 const q=$('search').value.toLowerCase(),t=$('filterType').value,s=$('filterStatus').value;const filtered=n.filter(r=>(!t||r['Gatepass Type']===t)&&(!s||r['Status']===s)&&(!q||[r['Gatepass No'],r['Party Name'],r['Material Name']].join(' ').toLowerCase().includes(q)));
-$('records').innerHTML=filtered.map(r=>`<tr><td>${esc(r['Gatepass No'])}</td><td>${esc(r['Date'])} ${esc(r['Out Time'])}</td><td>${esc(r['Gatepass Type'])}</td><td>${esc(r['Party Name'])}</td><td>${esc(r['Material Name'])}</td><td>${esc(r['Qty'])}</td><td>${esc(r['Received Qty'])}</td><td>${esc(r['Balance Qty'])}</td><td>${esc(r['In Date'])}</td><td>${esc(r['In Time'])}</td><td>${esc(r['Received By'])}</td><td>${esc(r['Taken By'])}</td><td>${esc(r['Movement Mode']==='Vehicle'?r['Vehicle No']:'By Hand')}</td><td>${esc(r['Driver Name'])}</td><td>${esc(r['Remarks'])}</td><td>${tag(r['Status'])}</td><td><button onclick="viewPhoto('${encodeURIComponent(r['Gatepass No'])}')">Photo</button></td><td>${actions(r)}</td></tr>`).join('')||'<tr><td colspan="18">No records</td></tr>';renderPhotos()}
+$('records').innerHTML=filtered.map(r=>`<tr><td>${esc(r['Gatepass No'])}</td><td>${esc(dateDisplay(r['Date']))}<br>${esc(timeDisplay(r['Out Time']))}</td><td>${esc(r['Gatepass Type'])}</td><td>${esc(r['Party Name'])}</td><td>${esc(r['Material Name'])}</td><td>${esc(r['Qty'])}</td><td>${esc(r['Received Qty'])}</td><td>${esc(r['Balance Qty'])}</td><td>${esc(dateDisplay(r['In Date']))}</td><td>${esc(timeDisplay(r['In Time']))}</td><td>${esc(r['Received By'])}</td><td>${esc(r['Taken By'])}</td><td>${esc(r['Movement Mode']==='Vehicle'?r['Vehicle No']:'By Hand')}</td><td>${esc(r['Driver Name'])}</td><td>${esc(r['Remarks'])}</td><td>${tag(r['Status'])}</td><td><button onclick="viewPhoto('${encodeURIComponent(r['Gatepass No'])}')">Photo</button></td><td>${actions(r)}</td></tr>`).join('')||'<tr><td colspan="18">No records</td></tr>';renderPhotos()}
 function byNo(encoded){return records.find(r=>String(r['Gatepass No'])===decodeURIComponent(encoded))}
 let receiveTarget=null;
 function closeReceive(){$('receiveModal').classList.add('hidden');receiveTarget=null}
